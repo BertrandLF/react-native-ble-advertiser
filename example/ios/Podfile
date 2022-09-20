@@ -1,11 +1,9 @@
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
-
 platform :ios, '12.4'
+install! 'cocoapods', :deterministic_uuids => false
 
-target 'BLEAdvertiserExample' do
-  config = use_native_modules!
-    # Flags change depending on the env values.
+  # Flags change depending on the env values.
   flags = get_default_flags()
   use_react_native!(
     :path => config[:reactNativePath],
@@ -22,7 +20,12 @@ target 'BLEAdvertiserExample' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+  target 'RnDiffAppTests' do
+    inherit! :complete
+    # Pods for testing
+  end
 
+ post_install do |installer|
     react_native_post_install(
       installer,
       # Set `mac_catalyst_enabled` to `true` in order to apply patches
@@ -31,6 +34,5 @@ target 'BLEAdvertiserExample' do
     )
     __apply_Xcode_12_5_M1_post_install_workaround(installer)
   end
-
-  use_native_modules!
+  
 end
