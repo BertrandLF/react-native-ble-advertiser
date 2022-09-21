@@ -5,6 +5,7 @@ platform :ios, '12.4'
 install! 'cocoapods', :deterministic_uuids => false
 
 target 'BLEAdvertiserExample' do
+  pod 'react-native-ble-advertiser', :path => '../node_modules/react-native-ble-advertiser/ios'
   config = use_native_modules!
 
   # Flags change depending on the env values.
