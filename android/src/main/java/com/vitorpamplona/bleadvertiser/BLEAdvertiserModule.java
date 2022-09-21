@@ -262,7 +262,7 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
         if (uid != null) 
             filters.add(new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(uid)).build());
         
-        mScanner.startScan(filters, scanSettings, mScannerCallback);
+        mScanner.startScan(null, scanSettings, mScannerCallback);
         promise.resolve("Scanner started");
     }
 

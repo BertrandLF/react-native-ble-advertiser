@@ -5835,8 +5835,8 @@
   "resolved" "https://registry.npmjs.org/react-is/-/react-is-18.2.0.tgz"
   "version" "18.2.0"
 
-"react-native-ble-advertiser@file:../react-native-ble-advertiser-0.0.16.tgz":
-  "integrity" "sha512-C/xNr50EwRNyDWabiu7G845aAZoRHddA93echunxwlf18KYodTR/9H7RrPc2iZtJUa4XsFUbCAfEWk7x2O0G9Q=="
+"react-native-ble-advertiser@../react-native-ble-advertiser-0.0.16.tgz":
+  "integrity" "sha512-tVCXV/dYRwZzU/bS1k3sQ2yeOLMkZZW0UTTBg1sDygGzwizyyCdSHNZaJSrG9YMIIIfyvlkwWpBg0H8C6kUXgg=="
   "resolved" "file:../react-native-ble-advertiser-0.0.16.tgz"
   "version" "0.0.16"
 
