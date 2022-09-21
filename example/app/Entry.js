@@ -14,7 +14,7 @@ import { Alert, Platform } from 'react-native';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import update from 'immutability-helper';
-import BLEAdvertiser from 'react-native-ble-advertiser'
+import BLEAdvertiser from 'react-native-ble-advertiser';
 import UUIDGenerator from 'react-native-uuid-generator';
 import { PermissionsAndroid } from 'react-native';
 
@@ -41,13 +41,13 @@ export async function requestLocationPermission() {
       }
     }
 
-    const blueoothActive = await BLEAdvertiser.getAdapterState().then(result => {
-      console.log('[Bluetooth]', 'Bluetooth Status', result)
-      return result === "STATE_ON";
-    }).catch(error => { 
-      console.log('[Bluetooth]', 'Bluetooth Not Enabled')
-      return false;
-    });
+    // const blueoothActive = await BLEAdvertiser.getAdapterState().then(result => {
+    //   console.log('[Bluetooth]', 'Bluetooth Status', result)
+    //   return result === "STATE_ON";
+    // }).catch(error => { 
+    //   console.log('[Bluetooth]', 'Bluetooth Not Enabled')
+    //   return false;
+    // });
 
     if (!blueoothActive) {
       await Alert.alert(
@@ -56,7 +56,7 @@ export async function requestLocationPermission() {
         [
           {
             text: 'Yes',
-            onPress: () => BLEAdvertiser.enableAdapter(),
+            //onPress: () => BLEAdvertiser.enableAdapter(),
           },
           {
             text: 'No',
@@ -100,7 +100,6 @@ class Entry extends Component {
 
     componentDidMount(){
       requestLocationPermission();
-      
       UUIDGenerator.getRandomUUID((newUid) => {
         this.setState({
           uuid: newUid.slice(0, -2) + '00'
@@ -115,31 +114,31 @@ class Entry extends Component {
 
     start() {
       console.log(this.state.uuid, "Registering Listener");
-      const eventEmitter = new NativeEventEmitter(NativeModules.BLEAdvertiser);
+     // const eventEmitter = new NativeEventEmitter(NativeModules.BLEAdvertiser);
 
-      this.onDeviceFound = eventEmitter.addListener('onDeviceFound', (event) => {
-        //console.log('onDeviceFound', event);
-        if (event.serviceUuids) {
-          for(let i=0; i< event.serviceUuids.length; i++){
-            if (event.serviceUuids[i] && event.serviceUuids[i].endsWith('00'))
-              this.addDevice(event.serviceUuids[i], event.deviceName, event.deviceAddress, event.rssi, new Date())   
-          }
-        }
-      });
+      // this.onDeviceFound = eventEmitter.addListener('onDeviceFound', (event) => {
+      //   //console.log('onDeviceFound', event);
+      //   if (event.serviceUuids) {
+      //     for(let i=0; i< event.serviceUuids.length; i++){
+      //       if (event.serviceUuids[i] && event.serviceUuids[i].endsWith('00'))
+      //         this.addDevice(event.serviceUuids[i], event.deviceName, event.deviceAddress, event.rssi, new Date())   
+      //     }
+      //   }
+      // });
 
       console.log(this.state.uuid, "Starting Advertising");
-      BLEAdvertiser.broadcast(this.state.uuid, MANUF_DATA, {
-        advertiseMode: BLEAdvertiser.ADVERTISE_MODE_BALANCED, 
-        txPowerLevel: BLEAdvertiser.ADVERTISE_TX_POWER_MEDIUM, 
-        connectable: false, 
-        includeDeviceName: false, includeTxPowerLevel: false })
-        .then(sucess => console.log(this.state.uuid, "Adv Successful", sucess))
-        .catch(error => console.log(this.state.uuid, "Adv Error", error));
+      // BLEAdvertiser.broadcast(this.state.uuid, MANUF_DATA, {
+      //   advertiseMode: BLEAdvertiser.ADVERTISE_MODE_BALANCED, 
+      //   txPowerLevel: BLEAdvertiser.ADVERTISE_TX_POWER_MEDIUM, 
+      //   connectable: false, 
+      //   includeDeviceName: false, includeTxPowerLevel: false })
+      //   .then(sucess => console.log(this.state.uuid, "Adv Successful", sucess))
+      //   .catch(error => console.log(this.state.uuid, "Adv Error", error));
       
-      console.log(this.state.uuid, "Starting Scanner");
-      BLEAdvertiser.scan(MANUF_DATA, {scanMode: BLEAdvertiser.SCAN_MODE_LOW_LATENCY})
-        .then(sucess => console.log(this.state.uuid, "Scan Successful", sucess))
-        .catch(error => console.log(this.state.uuid, "Scan Error", error));
+      // console.log(this.state.uuid, "Starting Scanner");
+      // BLEAdvertiser.scan(MANUF_DATA, {scanMode: BLEAdvertiser.SCAN_MODE_LOW_LATENCY})
+      //   .then(sucess => console.log(this.state.uuid, "Scan Successful", sucess))
+      //   .catch(error => console.log(this.state.uuid, "Scan Error", error));
 
       this.setState({
         isLogging: true,
@@ -152,14 +151,14 @@ class Entry extends Component {
       delete this.onDeviceFound;
 
       console.log(this.state.uuid, "Stopping Broadcast");
-      BLEAdvertiser.stopBroadcast()
-        .then(sucess => console.log(this.state.uuid, "Stop Broadcast Successful", sucess))
-        .catch(error => console.log(this.state.uuid, "Stop Broadcast Error", error));
+      // BLEAdvertiser.stopBroadcast()
+      //   .then(sucess => console.log(this.state.uuid, "Stop Broadcast Successful", sucess))
+      //   .catch(error => console.log(this.state.uuid, "Stop Broadcast Error", error));
 
-      console.log(this.state.uuid, "Stopping Scanning");
-      BLEAdvertiser.stopScan()
-        .then(sucess => console.log(this.state.uuid, "Stop Scan Successful", sucess) )
-        .catch(error => console.log(this.state.uuid, "Stop Scan Error", error) );
+      // console.log(this.state.uuid, "Stopping Scanning");
+      // BLEAdvertiser.stopScan()
+      //   .then(sucess => console.log(this.state.uuid, "Stop Scan Successful", sucess) )
+      //   .catch(error => console.log(this.state.uuid, "Stop Scan Error", error) );
 
       this.setState({
         isLogging: false,
