@@ -7,7 +7,7 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
+  FlatList, Platform
 } from 'react-native';
 
 import { Alert, Platform } from 'react-native';
@@ -22,7 +22,7 @@ import { PermissionsAndroid } from 'react-native';
 const APPLE_ID = 0x4C;
 const MANUF_DATA = [1, 0];
 // No scanner filters (finds all devices inc iPhone). Use UUID suffix to filter scans if using.
-const SCAN_MANUF_DATA = null;
+const SCAN_MANUF_DATA = Platform.OS == 'android' ? null : MANUF_DATA;
 
 BLEAdvertiser.setCompanyId(APPLE_ID); 
 
