@@ -10,7 +10,6 @@ import {
   FlatList, Platform
 } from 'react-native';
 
-import { Alert, Platform } from 'react-native';
 import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import update from 'immutability-helper';
