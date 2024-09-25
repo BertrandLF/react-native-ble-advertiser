@@ -51,13 +51,6 @@ export async function requestLocationPermission() {
         console.log('[Bluetooth]', 'Bluetooth Not Enabled');
         return false;
       });
-    const blueoothActive = await BLEAdvertiser.getAdapterState().then(result => {
-      console.log('[Bluetooth]', 'Bluetooth Status', result)
-      return result === "STATE_ON";
-    }).catch(error => {
-      console.log('[Bluetooth]', 'Bluetooth Not Enabled')
-      return false;
-    });
 
     if (!blueoothActive) {
       await Alert.alert(

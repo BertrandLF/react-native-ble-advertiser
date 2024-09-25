@@ -8,9 +8,6 @@
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint ."
-    "start": "react-native start",
-    "test": "jest",
-    "lint": "eslint ."
   },
   "dependencies": {
     "immutability-helper": "^3.1.1",
