@@ -7,67 +7,39 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
-  Platform,
+  FlatList, Platform
 } from 'react-native';
 
-import {NativeEventEmitter, NativeModules} from 'react-native';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import update from 'immutability-helper';
 import BLEAdvertiser from 'react-native-ble-advertiser';
 import UUIDGenerator from 'react-native-uuid-generator';
-import { requestMultiple, checkMultiple, PERMISSIONS } from 'react-native-permissions';
+import { PermissionsAndroid } from 'react-native';
 
 // Uses the Apple code to pick up iPhones
-const APPLE_ID = 0x4c;
+const APPLE_ID = 0x4C;
 const MANUF_DATA = [1, 0];
 // No scanner filters (finds all devices inc iPhone). Use UUID suffix to filter scans if using.
-const SCAN_MANUF_DATA = Platform.OS === 'android' ? null : MANUF_DATA;
-const UUID_SUFFIX = '00'
+const SCAN_MANUF_DATA = Platform.OS == 'android' ? null : MANUF_DATA;
+
 BLEAdvertiser.setCompanyId(APPLE_ID);
-
-const requestPermissionsAndroid = () => {
-  checkMultiple([PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,
-  PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
-  PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-  PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION]).then(res => {
-    console.log('Advertise', res[PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE]);
-    console.log('Connect', res[PERMISSIONS.ANDROID.BLUETOOTH_CONNECT]);
-    console.log('Scan', res[PERMISSIONS.ANDROID.BLUETOOTH_SCAN]);
-    console.log('Bluetooth Android 10', res[PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION]);
-  })
-
-  requestMultiple([PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,
-  PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
-  PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-  PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION]).then(res => {
-    console.log('Advertise', res[PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE]);
-    console.log('Connect', res[PERMISSIONS.ANDROID.BLUETOOTH_CONNECT]);
-    console.log('Scan', res[PERMISSIONS.ANDROID.BLUETOOTH_SCAN]);
-    console.log('Bluetooth Android 10', res[PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION]);
-  })
-}
-
-const requestPermissionsIos = () => {
-  checkMultiple([PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL,
-  PERMISSIONS.IOS.LOCATION_WHEN_IN_USE]).then(res => {
-    console.log('Advertise', res[PERMISSIONS.IOS.LOCATION_WHEN_IN_USE]);
-    console.log('Connect', res[PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL]);
-  })
-
-  requestMultiple([PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL,
-  PERMISSIONS.IOS.LOCATION_WHEN_IN_USE]).then(res => {
-    console.log('Advertise', res[PERMISSIONS.IOS.LOCATION_WHEN_IN_USE]);
-    console.log('Connect', res[PERMISSIONS.IOS.BLUETOOTH_PERIPHERAL]);
-  })
-}
 
 export async function requestLocationPermission() {
   try {
     if (Platform.OS === 'android') {
-      requestPermissionsAndroid();
-    } else {
-      requestPermissionsIos();
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        {
+          'title': 'BLE Avertiser Example App',
+          'message': 'Example App access to your location '
+        }
+      )
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('[Permissions]', 'Location Permission granted')
+      } else {
+        console.log('[Permissions]', 'Location Permission denied')
+      }
     }
 
     const blueoothActive = await BLEAdvertiser.getAdapterState()
@@ -79,6 +51,13 @@ export async function requestLocationPermission() {
         console.log('[Bluetooth]', 'Bluetooth Not Enabled');
         return false;
       });
+    const blueoothActive = await BLEAdvertiser.getAdapterState().then(result => {
+      console.log('[Bluetooth]', 'Bluetooth Status', result)
+      return result === "STATE_ON";
+    }).catch(error => {
+      console.log('[Bluetooth]', 'Bluetooth Not Enabled')
+      return false;
+    });
 
     if (!blueoothActive) {
       await Alert.alert(
@@ -103,52 +82,40 @@ export async function requestLocationPermission() {
 }
 
 class Entry extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      uuid: '',
-      isLogging: false,
-      devicesFound: [],
-    };
-  }
+    constructor(props) {
+        super(props);
+        this.state = {
+            uuid:'',
+            isLogging: false,
+            devicesFound:[]
+        }
+    }
 
-  addDevice(_uuid, _name, _mac, _rssi, _date) {
-    const index = this.state.devicesFound.findIndex(({uuid}) => uuid === _uuid);
-    if (index < 0) {
-      this.setState({
-        devicesFound: update(this.state.devicesFound, {
-          $push: [
-            {
-              uuid: _uuid,
-              name: _name,
-              mac: _mac,
-              rssi: _rssi,
-              start: _date,
-              end: _date,
-            },
-          ],
-        }),
-      });
-    } else {
-      this.setState({
-        devicesFound: update(this.state.devicesFound, {
-          [index]: {
-            end: {$set: _date},
-            rssi: {$set: _rssi || this.state.devicesFound[index].rssi},
-          },
-        }),
+    addDevice(_uuid, _name, _mac, _rssi, _date) {
+      const index = this.state.devicesFound.findIndex( ({ uuid }) => uuid == _uuid);
+      if (index<0) {
+        this.setState({
+          devicesFound: update(this.state.devicesFound,
+            {$push: [{uuid:_uuid, name:_name, mac: _mac, rssi:_rssi, start:_date, end:_date}]}
+          )
+        });
+      } else {
+        this.setState({
+          devicesFound: update(this.state.devicesFound,
+            {[index]: {end: {$set: _date}, rssi: {$set: _rssi || this.state.devicesFound[index].rssi }}}
+          )
+        });
+      }
+    }
+
+    componentDidMount(){
+      requestLocationPermission();
+      UUIDGenerator.getRandomUUID((newUid) => {
+        this.setState({
+          uuid: newUid.slice(0, -2) + '00'
+        });
       });
     }
-  }
-
-  componentDidMount() {
-    requestLocationPermission();
-    UUIDGenerator.getRandomUUID((newUid) => {
-      this.setState({
-        uuid: newUid.slice(0, -2) + UUID_SUFFIX,
-      });
-    });
-  }
 
   componentWillUnmount() {
     if (this.state.isLogging) {
@@ -156,44 +123,33 @@ class Entry extends Component {
     }
   }
 
-  start() {
-    console.log(this.state.uuid, 'Registering Listener');
-    const eventEmitter = new NativeEventEmitter(NativeModules.BLEAdvertiser);
+    start() {
+      console.log(this.state.uuid, "Registering Listener");
+      const eventEmitter = new NativeEventEmitter(NativeModules.BLEAdvertiser);
 
-    this.onDeviceFound = eventEmitter.addListener('onDeviceFound', (event) => {
-      //console.log('onDeviceFound', event);
-      if (event.serviceUuids) {
-        for (let i = 0; i < event.serviceUuids.length; i++) {
-          if (event.serviceUuids[i] && event.serviceUuids[i].endsWith(UUID_SUFFIX)) {
-            this.addDevice(
-              event.serviceUuids[i],
-              event.deviceName,
-              event.deviceAddress,
-              event.rssi,
-              new Date(),
-            );
+      this.onDeviceFound = eventEmitter.addListener('onDeviceFound', (event) => {
+        //console.log('onDeviceFound', event);
+        if (event.serviceUuids) {
+          for(let i=0; i< event.serviceUuids.length; i++){
+            if (event.serviceUuids[i] && event.serviceUuids[i].endsWith('00'))
+              this.addDevice(event.serviceUuids[i], event.deviceName, event.deviceAddress, event.rssi, new Date())
           }
         }
-      }
-    });
+      });
 
-    console.log(this.state.uuid, 'Starting Advertising');
-    BLEAdvertiser.broadcast(this.state.uuid, MANUF_DATA, {
-      advertiseMode: BLEAdvertiser.ADVERTISE_MODE_BALANCED,
-      txPowerLevel: BLEAdvertiser.ADVERTISE_TX_POWER_MEDIUM,
-      connectable: false,
-      includeDeviceName: false,
-      includeTxPowerLevel: false,
-    })
-      .then((sucess) => console.log(this.state.uuid, 'Adv Successful', sucess))
-      .catch((error) => console.log(this.state.uuid, 'Adv Error', error));
+      console.log(this.state.uuid, "Starting Advertising");
+      BLEAdvertiser.broadcast(this.state.uuid, MANUF_DATA, {
+        advertiseMode: BLEAdvertiser.ADVERTISE_MODE_BALANCED,
+        txPowerLevel: BLEAdvertiser.ADVERTISE_TX_POWER_MEDIUM,
+        connectable: false,
+        includeDeviceName: false, includeTxPowerLevel: false })
+        .then(sucess => console.log(this.state.uuid, "Adv Successful", sucess))
+        .catch(error => console.log(this.state.uuid, "Adv Error", error));
 
-    console.log(this.state.uuid, 'Starting Scanner');
-    BLEAdvertiser.scan(SCAN_MANUF_DATA, {
-      scanMode: BLEAdvertiser.SCAN_MODE_LOW_LATENCY,
-    })
-      .then((sucess) => console.log(this.state.uuid, 'Scan Successful', sucess))
-      .catch((error) => console.log(this.state.uuid, 'Scan Error', error));
+      console.log(this.state.uuid, "Starting Scanner");
+      BLEAdvertiser.scan(SCAN_MANUF_DATA, {scanMode: BLEAdvertiser.SCAN_MODE_LOW_LATENCY})
+        .then(sucess => console.log(this.state.uuid, "Scan Successful", sucess))
+        .catch(error => console.log(this.state.uuid, "Scan Error", error));
 
     this.setState({
       isLogging: true,
@@ -227,6 +183,9 @@ class Entry extends Component {
       str.substring(str.length - 4, str.length)
     ).toUpperCase();
   }
+    short(str) {
+      return (str.substring(0, 4) + " ... " + str.substring(str.length-4, str.length)).toUpperCase();
+    }
 
   render() {
     return (
