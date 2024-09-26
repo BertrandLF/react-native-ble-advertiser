@@ -128,10 +128,6 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void broadcast(String uid, ReadableArray payload, ReadableMap options, Promise promise) {
-        if (!checkPermission()) {
-            handlePermissionException(promise);
-            return;
-        }
 
         if (mBluetoothAdapter == null) {
             Log.w("BLEAdvertiserModule", "Device does not support Bluetooth. Adapter is Null");
@@ -171,7 +167,8 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
             }
         } else {
             tempAdvertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
-            tempCallback = new BLEAdvertiserModule.SimpleAdvertiseCallback(promise);
+            tempCallback = new SimpleAdvertiseCallback(promise);
+            ((SimpleAdvertiseCallback) tempCallback).setPayload(toByteArray(payload));
         }
 
         if (tempAdvertiser == null) {
@@ -183,7 +180,11 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
         AdvertiseSettings settings = buildAdvertiseSettings(options);
         AdvertiseData data = buildAdvertiseData(ParcelUuid.fromString(uid), toByteArray(payload), options);
         Log.w("BLEAdvertiserModule", "Advertising data: " + data.toString());
-        tempAdvertiser.startAdvertising(settings, data, tempCallback);
+        try {
+            tempAdvertiser.startAdvertising(settings, data, tempCallback);
+        } catch (SecurityException e) {
+            handlePermissionException(promise);
+        }
 
         mAdvertiserList.put(uid, tempAdvertiser);
         mAdvertiserCallbackList.put(uid, tempCallback);
@@ -304,7 +305,11 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
         if (uid != null)
             filters.add(new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(uid)).build());
 
-        mScanner.startScan(filters, scanSettings, mScannerCallback);
+        try {
+            mScanner.startScan(filters, scanSettings, mScannerCallback);
+        } catch (SecurityException e) {
+            handlePermissionException(promise);
+        }
         promise.resolve("Scanner started");
     }
 
@@ -537,12 +542,17 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
 
     private class SimpleAdvertiseCallback extends AdvertiseCallback {
         Promise promise;
+        private byte[] payload;
 
         public SimpleAdvertiseCallback () {
         }
 
         public SimpleAdvertiseCallback (Promise promise) {
             this.promise = promise;
+        }
+
+        public void setPayload(byte[] payload) {
+            this.payload = payload;
         }
 
         @Override
@@ -560,7 +570,14 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
                 case ADVERTISE_FAILED_ALREADY_STARTED:
                     promise.reject("Failed to start advertising as the advertising is already started."); break;
                 case ADVERTISE_FAILED_DATA_TOO_LARGE:
-                    promise.reject("Failed to start advertising as the advertise data to be broadcasted is larger than 31 bytes."); break;
+                    String errorMessage = String.format(
+                        "Failed to start advertising as the advertise data to be broadcasted is larger than 31 bytes. " +
+                        "Payload size: %d bytes. Payload: %s",
+                        payload != null ? payload.length : 0,
+                        payload != null ? bytesToHex(payload) : "null"
+                    );
+                    promise.reject(errorMessage);
+                    break;
                 case ADVERTISE_FAILED_INTERNAL_ERROR:
                     promise.reject("Operation failed due to an internal error."); break;
             }
@@ -574,6 +591,14 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
             if (promise == null) return;
             promise.resolve(settingsInEffect.toString());
         }
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02X ", b));
+        }
+        return sb.toString().trim();
     }
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
