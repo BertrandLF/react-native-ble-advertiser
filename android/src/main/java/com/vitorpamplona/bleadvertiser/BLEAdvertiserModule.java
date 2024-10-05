@@ -1,4 +1,4 @@
-package com.vitorpamplona.bleavertiser;
+package com.vitorpamplona.bleadvertiser;
 
 import com.facebook.react.uimanager.*;
 import com.facebook.react.bridge.*;
@@ -178,8 +178,11 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
         }
 
         AdvertiseSettings settings = buildAdvertiseSettings(options);
-        AdvertiseData data = buildAdvertiseData(ParcelUuid.fromString(uid), toByteArray(payload), options);
-        Log.w("BLEAdvertiserModule", "Advertising data: " + data.toString());
+        AdvertiseDataWithPayload adWithPayload = buildAdvertiseData(ParcelUuid.fromString(uid), toByteArray(payload), options);
+        AdvertiseData data = adWithPayload.data;
+        byte[] advertisingBytes = adWithPayload.payload;
+        Log.w("BLEAdvertiserModule", "Total advertising data size: " + advertisingBytes.length + " bytes");
+        Log.w("BLEAdvertiserModule", "Advertising payload: " + bytesToHex(advertisingBytes));
         try {
             tempAdvertiser.startAdvertising(settings, data, tempCallback);
         } catch (SecurityException e) {
@@ -526,18 +529,41 @@ public class BLEAdvertiserModule extends ReactContextBaseJavaModule {
         return settingsBuilder.build();
     }
 
-    private AdvertiseData buildAdvertiseData(ParcelUuid uuid, byte[] payload, ReadableMap options) {
+    private class AdvertiseDataWithPayload {
+        public AdvertiseData data;
+        public byte[] payload;
+
+        AdvertiseDataWithPayload(AdvertiseData data, byte[] payload) {
+            this.data = data;
+            this.payload = payload;
+        }
+    }
+
+    private AdvertiseDataWithPayload buildAdvertiseData(ParcelUuid uuid, byte[] payload, ReadableMap options) {
         AdvertiseData.Builder dataBuilder = new AdvertiseData.Builder();
 
-        if (options != null && options.hasKey("includeDeviceName"))
-            dataBuilder.setIncludeDeviceName(options.getBoolean("includeDeviceName"));
+        // Only include device name if explicitly requested and there's room
+        if (options != null && options.hasKey("includeDeviceName") && options.getBoolean("includeDeviceName")) {
+            dataBuilder.setIncludeDeviceName(true);
+        }
 
-         if (options != null && options.hasKey("includeTxPowerLevel"))
-            dataBuilder.setIncludeTxPowerLevel(options.getBoolean("includeTxPowerLevel"));
+        // Only include TX power level if explicitly requested
+        if (options != null && options.hasKey("includeTxPowerLevel") && options.getBoolean("includeTxPowerLevel")) {
+            dataBuilder.setIncludeTxPowerLevel(true);
+        }
 
+        // Add manufacturer data (your payload)
         dataBuilder.addManufacturerData(companyId, payload);
-        dataBuilder.addServiceUuid(uuid);
-        return dataBuilder.build();
+
+        // Only add service UUID if there's room
+        int estimatedSize = 3 + 2 + payload.length; // Flags + Manufacturer ID + payload
+        if (estimatedSize <= 31) {
+            dataBuilder.addServiceUuid(uuid);
+        } else {
+            Log.w("BLEAdvertiserModule", "Not enough room for service UUID");
+        }
+
+        return new AdvertiseDataWithPayload(dataBuilder.build(), payload);
     }
 
     private class SimpleAdvertiseCallback extends AdvertiseCallback {
